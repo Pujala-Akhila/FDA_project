@@ -1,0 +1,815 @@
+---
+title: "rev"
+author: "21MIA1012_PujalaAkhila"
+date: "2024-10-09"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r}
+# Load required libraries
+library(readr)
+library(dplyr)
+
+# Read the dataset
+data <- read.csv("C:\\Users\\pujal\\Downloads\\foundations_of_data_analytics\\city_day.csv")
+# Convert the 'Date' column to date format
+data$Date <- as.Date(data$Date)
+# Display the first few rows of the dataset
+head(data)
+```
+```{r}
+# Display the structure of the data (data types and number of values)
+str(data)
+# Display a summary of the dataset (gives an overview of the columns)
+summary(data)
+```
+```{r}
+# Install the VIM package if not already installed
+#install.packages("VIM")
+# Load required libraries
+library(VIM)
+# Visualize missing data with a heatmap
+matrixplot(data, main = "Missing Data Heatmap")
+```
+```{r}
+# Create a copy of the original data
+df1 <- data
+# Replace missing values in each column with the median or a specific value
+df1$PM2.5 <- ifelse(is.na(df1$PM2.5), median(df1$PM2.5, na.rm = TRUE), df1$PM2.5)
+df1$PM10 <- ifelse(is.na(df1$PM10), median(df1$PM10, na.rm = TRUE), df1$PM10)
+df1$NO <- ifelse(is.na(df1$NO), median(df1$NO, na.rm = TRUE), df1$NO)
+df1$NO2 <- ifelse(is.na(df1$NO2), median(df1$NO2, na.rm = TRUE), df1$NO2)
+df1$NOx <- ifelse(is.na(df1$NOx), median(df1$NOx, na.rm = TRUE), df1$NOx)
+df1$NH3 <- ifelse(is.na(df1$NH3), median(df1$NH3, na.rm = TRUE), df1$NH3)
+df1$CO <- ifelse(is.na(df1$CO), median(df1$CO, na.rm = TRUE), df1$CO)
+df1$SO2 <- ifelse(is.na(df1$SO2), median(df1$SO2, na.rm = TRUE), df1$SO2)
+df1$O3 <- ifelse(is.na(df1$O3), median(df1$O3, na.rm = TRUE), df1$O3)
+df1$Benzene <- ifelse(is.na(df1$Benzene), median(df1$Benzene, na.rm = TRUE), df1$Benzene)
+df1$Toluene <- ifelse(is.na(df1$Toluene), median(df1$Toluene, na.rm = TRUE), df1$Toluene)
+df1$Xylene <- ifelse(is.na(df1$Xylene), median(df1$Xylene, na.rm = TRUE), df1$Xylene)
+df1$AQI <- ifelse(is.na(df1$AQI), median(df1$AQI, na.rm = TRUE), df1$AQI)
+# Replace missing values in 'Air_quality' column with 'Moderate'
+df1$Air_quality <- ifelse(is.na(df1$AQI_Bucket), 'Moderate', df1$AQI_Bucket)
+```
+```{r}
+# Create a copy of df1
+df <- df1
+# Filter rows where 'Date' is less than or equal to '01-01-2020'
+df <- df[df$Date <= as.Date("2020-01-01"), ]
+# Create new columns for 'Vehicular Pollution content' and 'Industrial Pollution content'
+df$`Vehicular Pollution content` <- df$PM2.5 + df$PM10 + df$NO + df$NO2 + df$NOx + df$NH3 + df$CO
+df$`Industrial Pollution content` <- df$SO2 + df$O3 + df$Benzene + df$Toluene + df$Xylene
+# Drop the specified columns
+df <- df %>%
+  select(-PM2.5, -PM10, -NO, -NO2, -NOx, -NH3, -CO, -SO2, -O3, -Benzene, -Toluene, -Xylene)
+# Display the structure of the data
+str(df)
+```
+```{r}
+# Install required package if not already installed
+#install.packages("plotly")
+# Load the library
+library(plotly)
+# Function for plotting a variable
+ploting <- function(var) {
+  p <- plot_ly(df, x = ~City, y = df[[var]], type = 'scatter', mode = 'lines', line = list(color = 'black')) %>%
+    layout(title = var, 
+           xaxis = list(title = 'Cities'), 
+           yaxis = list(title = var))
+  print(p)
+}
+# Plotting 'Vehicular Pollution content'
+ploting('Vehicular Pollution content')
+# Plotting 'Industrial Pollution content'
+ploting('Industrial Pollution content')
+```
+```{r}
+# Install required packages if not already installed
+#install.packages("ggplot2")
+# Load the libraries
+library(ggplot2)
+# Function for plotting the maximum bar plot
+max_bar_plot <- function(var) {
+  # Group by City, calculate median, and sort to get top 10 cities
+  top_cities <- df %>%
+    group_by(City) %>%
+    summarise(median_value = median(.data[[var]], na.rm = TRUE)) %>%
+    arrange(desc(median_value)) %>%
+    slice_head(n = 10)
+  # Create a bar plot
+  p <- ggplot(top_cities, aes(x = reorder(City, median_value), y = median_value)) +
+    geom_bar(stat = "identity", fill = "black") +
+    coord_flip() +  # Flip coordinates to make it horizontal
+    labs(title = paste(var, "Most Polluted Cities"), x = "Cities", y = var)
+  # Display the plot
+  print(p)
+}
+# Plotting 'Industrial Pollution content'
+max_bar_plot('Industrial Pollution content')
+# Plotting 'Vehicular Pollution content'
+max_bar_plot('Vehicular Pollution content')
+```
+```{r}
+# Function for plotting the minimum bar plot
+min_bar_plot <- function(var) {
+  # Group by City, calculate mean, and sort to get bottom 10 cities
+  bottom_cities <- df %>%
+    group_by(City) %>%
+    summarise(mean_value = mean(.data[[var]], na.rm = TRUE)) %>%
+    arrange(mean_value) %>%
+    slice_head(n = 10)
+  # Create a bar plot
+  p <- ggplot(bottom_cities, aes(x = reorder(City, mean_value), y = mean_value)) +
+    geom_bar(stat = "identity", fill = "black") +
+    coord_flip() +  # Flip coordinates to make it horizontal
+    labs(title = paste(var, "Minimum Polluted Cities"), x = "Cities", y = var)
+  # Display the plot
+  print(p)
+}
+# Plotting 'Industrial Pollution content'
+min_bar_plot('Industrial Pollution content')
+# Plotting 'Vehicular Pollution content'
+min_bar_plot('Vehicular Pollution content')
+```
+```{r}
+#install.packages("tidyr")  # Install tidyr if you haven't
+library(tidyr)  # Load the tidyr package
+# Function to calculate satisfaction levels for a given city
+al <- function(var) {
+  # Filter the dataset for dates on or before '2020-04-01'
+  filtered_city_day <- df1 %>% filter(Date <= as.Date("2020-04-01"))
+  filtered_city_day <- filtered_city_day %>% filter(Air_quality != "")
+  # Extract the relevant data for the specified city
+  AQI <- filtered_city_day %>% 
+    filter(City == var) %>% 
+    select(City, Air_quality)
+  # Calculate value counts for 'Air_quality'
+  k <- table(AQI$Air_quality)
+  m <- round(k / sum(k) * 100)  # Calculate percentage
+  # Convert to data frame and reset row names
+  df <- as.data.frame(m)
+  colnames(df) <- c("Air_quality", var)  # Rename columns
+  return(df)
+}
+# Calculate satisfaction levels for each city
+c11 <- al('Ahmedabad')
+c22 <- al('Delhi')
+c33 <- al('Kolkata')
+c44 <- al('Mumbai')
+c55 <- al('Bengaluru')
+# List of the data frames
+dfs <- list(Ahmedabad = c11, Delhi = c22, Kolkata = c33, Mumbai = c44, Bengaluru = c55)
+# Ensure all data frames have the same columns and fill missing values with 0
+combined_df <- Reduce(function(x, y) {
+  merge(x, y, by = "Air_quality", all = TRUE)
+}, dfs)
+# Fill NA values with 0
+combined_df[is.na(combined_df)] <- 0
+# Convert to long format for plotting
+df_row_long <- pivot_longer(combined_df, -Air_quality, names_to = "City", values_to = "Percentage")
+# Create a bar plot
+p <- ggplot(df_row_long, aes(x = Air_quality, y = Percentage, fill = City)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Satisfaction Level of People (Pre COVID19)", x = "Satisfaction Level", y = "Percentage of Satisfaction") +
+  theme_minimal() +
+  theme(legend.position = "right")
+# Display the plot
+print(p)
+```
+```{r}
+#post corona
+# Create a copy of df1
+df <- df1
+# Filter the data to include only rows with Date after January 1, 2020
+df <- df %>% filter(Date > as.Date("2020-01-01"))
+# Create a new column 'Vehicular Pollution content'
+df <- df %>% 
+  mutate(`Vehicular Pollution content` = PM2.5 + PM10 + NO + NO2 + NOx + NH3 + CO)
+# Create a new column 'Industrial Pollution content'
+df <- df %>%
+  mutate(`Industrial Pollution content` = SO2 + O3 + Benzene + Toluene + Xylene)
+# Drop the specified pollutant columns
+df <- df %>%
+  select(-c(PM2.5, PM10, NO, NO2, NOx, NH3, CO, SO2, O3, Benzene, Toluene, Xylene))
+# View the structure of the updated dataframe
+str(df)
+```
+```{r}
+# Install required package if not already installed
+#install.packages("plotly")
+# Load the library
+library(plotly)
+# Function for plotting a variable
+ploting <- function(var) {
+  p <- plot_ly(df, x = ~City, y = df[[var]], type = 'scatter', mode = 'lines', line = list(color = 'black')) %>%
+    layout(title = var, 
+           xaxis = list(title = 'Cities'), 
+           yaxis = list(title = var))
+  print(p)
+}
+# Plotting 'Vehicular Pollution content'
+ploting('Vehicular Pollution content')
+# Plotting 'Industrial Pollution content'
+ploting('Industrial Pollution content')
+```
+```{r}
+# Install required packages if not already installed
+#install.packages("ggplot2")
+# Load the libraries
+library(ggplot2)
+# Function for plotting the maximum bar plot
+max_bar_plot <- function(var) {
+  # Group by City, calculate median, and sort to get top 10 cities
+  top_cities <- df %>%
+    group_by(City) %>%
+    summarise(median_value = median(.data[[var]], na.rm = TRUE)) %>%
+    arrange(desc(median_value)) %>%
+    slice_head(n = 10)
+  # Create a bar plot
+  p <- ggplot(top_cities, aes(x = reorder(City, median_value), y = median_value)) +
+    geom_bar(stat = "identity", fill = "black") +
+    coord_flip() +  # Flip coordinates to make it horizontal
+    labs(title = paste(var, "Most Polluted Cities"), x = "Cities", y = var)
+  # Display the plot
+  print(p)
+}
+# Plotting 'Industrial Pollution content'
+max_bar_plot('Industrial Pollution content')
+# Plotting 'Vehicular Pollution content'
+max_bar_plot('Vehicular Pollution content')
+```
+```{r}
+# Function for plotting the minimum bar plot
+min_bar_plot <- function(var) {
+  # Group by City, calculate mean, and sort to get bottom 10 cities
+  bottom_cities <- df %>%
+    group_by(City) %>%
+    summarise(mean_value = mean(.data[[var]], na.rm = TRUE)) %>%
+    arrange(mean_value) %>%
+    slice_head(n = 10)
+  # Create a bar plot
+  p <- ggplot(bottom_cities, aes(x = reorder(City, mean_value), y = mean_value)) +
+    geom_bar(stat = "identity", fill = "black") +
+    coord_flip() +  # Flip coordinates to make it horizontal
+    labs(title = paste(var, "Minimum Polluted Cities"), x = "Cities", y = var)
+  # Display the plot
+  print(p)
+}
+# Plotting 'Industrial Pollution content'
+min_bar_plot('Industrial Pollution content')
+# Plotting 'Vehicular Pollution content'
+min_bar_plot('Vehicular Pollution content')
+```
+```{r}
+#install.packages("tidyr")  # Install tidyr if you haven't
+library(tidyr)  # Load the tidyr package
+# Function to calculate satisfaction levels for a given city
+al <- function(var) {
+  # Filter the dataset for dates on or before '2020-04-01'
+  filtered_city_day <- df1 %>% filter(Date > as.Date("2020-04-01"))
+  filtered_city_day <- filtered_city_day %>% filter(Air_quality != "")
+  # Extract the relevant data for the specified city
+  AQI <- filtered_city_day %>% 
+    filter(City == var) %>% 
+    select(City, Air_quality)
+  # Calculate value counts for 'Air_quality'
+  k <- table(AQI$Air_quality)
+  m <- round(k / sum(k) * 100)  # Calculate percentage
+  # Convert to data frame and reset row names
+  df <- as.data.frame(m)
+  colnames(df) <- c("Air_quality", var)  # Rename columns
+  return(df)
+}
+# Calculate satisfaction levels for each city
+c11 <- al('Ahmedabad')
+c22 <- al('Delhi')
+c33 <- al('Kolkata')
+c44 <- al('Mumbai')
+c55 <- al('Bengaluru')
+# List of the data frames
+dfs <- list(Ahmedabad = c11, Delhi = c22, Kolkata = c33, Mumbai = c44, Bengaluru = c55)
+# Ensure all data frames have the same columns and fill missing values with 0
+combined_df <- Reduce(function(x, y) {
+  merge(x, y, by = "Air_quality", all = TRUE)
+}, dfs)
+# Fill NA values with 0
+combined_df[is.na(combined_df)] <- 0
+# Convert to long format for plotting
+df_row_long <- pivot_longer(combined_df, -Air_quality, names_to = "City", values_to = "Percentage")
+# Create a bar plot
+p <- ggplot(df_row_long, aes(x = Air_quality, y = Percentage, fill = City)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Satisfaction Level of People (Post COVID19)", x = "Satisfaction Level", y = "Percentage of Satisfaction") +
+  theme_minimal() +
+  theme(legend.position = "right")
+# Display the plot
+print(p)
+```
+```{r}
+# Load necessary libraries
+library(dplyr)
+library(forcats)
+
+# Identify categorical attributes
+categorical_attributes <- df %>%
+  select(where(is.character)) %>%
+  colnames()
+print(paste("categorical_attributes:", toString(categorical_attributes)))
+
+# Encode categorical attributes using factors
+df1$City <- as.numeric(as.factor(df1$City))  # Encode 'City' as numeric
+df1$Air_quality <- as.numeric(as.factor(df1$Air_quality))  # Encode 'Air_quality' asnumeric
+df1 <- df1[, -which(names(df1) == "AQI_Bucket")]
+# Show structure of the dataframe after encoding
+str(df1)
+
+```
+```{r}
+#install.packages("ggcorrplot")
+# Load necessary libraries
+library(ggcorrplot)
+library(ggplot2)
+
+# Select only numeric columns from df1
+numeric_columns <- df1 %>%
+  select(where(is.numeric))
+
+# Calculate the correlation matrix
+cor_matrix <- cor(numeric_columns, use = "complete.obs")
+
+# Plot the correlation matrix with a color gradient
+ggcorrplot(cor_matrix, method = "square", 
+           lab = TRUE, 
+           type = "lower", 
+           ggtheme = ggplot2::theme_minimal(), 
+           colors = c("red", "white", "blue"),
+           title = "Correlation Matrix",
+           outline.color = "black")
+```
+```{r}
+#install.packages("caret")
+# Load necessary libraries
+library(caret)  # For data splitting
+library(dplyr)
+
+# Define the response variable (y) and predictor variables (x)
+y <- df1$Air_quality
+x <- df1 %>%
+  select(City, PM2.5, PM10, NO, NO2, NOx, NH3, CO, SO2, O3, Benzene, Toluene, Xylene, AQI)
+
+# Set seed for reproducibility
+set.seed(0)
+
+# Split the data into training and testing sets (70% training, 30% testing)
+train_index <- createDataPartition(y, p = 0.7, list = FALSE)
+
+# Training set
+X_train <- x[train_index, ]
+y_train <- y[train_index]
+
+# Testing set
+X_test <- x[-train_index, ]
+y_test <- y[-train_index]
+
+# Display the dimensions of the split datasets
+cat("Training set: X_train =", dim(X_train), ", y_train =", length(y_train), "\n")
+cat("Testing set: X_test =", dim(X_test), ", y_test =", length(y_test), "\n")
+
+```
+```{r}
+# Count the classes and their occurrences in the training set
+class_counts <- table(y_train)
+
+# Print the class counts
+print("Classes and number of values in training set:")
+print(class_counts)
+
+```
+```{r}
+# Load necessary libraries
+library(e1071)  # For SVM
+library(caret)  # For confusion matrix and accuracy
+
+# Initialize and fit the SVM model
+svm_model <- svm(Air_quality ~ ., data = data.frame(X_train, Air_quality = y_train),type = "C-classification", kernel = "radial")
+
+# Make predictions on the test set
+svmpred <- predict(svm_model, newdata = data.frame(X_test))
+
+# Generate confusion matrix
+cm <- confusionMatrix(as.factor(svmpred), as.factor(y_test))
+
+# Print confusion matrix
+print("Confusion Matrix:")
+print(cm$table)
+
+# Calculate accuracy
+accuracy <- sum(diag(cm$table)) / sum(cm$table) * 100
+cat("Accuracy:", accuracy, "%\n")
+
+```
+```{r}
+# Load necessary libraries
+library(randomForest)
+library(caret)  # For confusion matrix and accuracy
+
+# Set seed for reproducibility
+set.seed(23)
+
+# Convert 'Air_quality' to factor for categorical predictions
+y_train <- factor(y_train)  # Ensure the target variable is a factor
+y_test <- factor(y_test)    # Ensure the test labels are factors
+
+# Initialize and fit the Random Forest model
+rf_model <- randomForest(Air_quality ~ ., data = data.frame(X_train, Air_quality = y_train), ntree = 20)
+
+# Make predictions on the test set
+rf_predict <- predict(rf_model, newdata = data.frame(X_test))
+
+# Ensure that the predictions are factors (important for confusion matrix)
+rf_predict <- factor(rf_predict, levels = levels(y_test))
+
+# Generate confusion matrix for the test set predictions
+rf_conf_matrix <- confusionMatrix(rf_predict, y_test)
+
+# Print confusion matrix
+print("Confusion Matrix:")
+print(rf_conf_matrix$table)
+
+# Accuracy is part of the confusion matrix output
+rf_acc_score <- rf_conf_matrix$overall['Accuracy'] * 100
+cat("Accuracy:", rf_acc_score, "%\n")
+
+# Additional metrics like sensitivity, specificity, etc.
+cat("\nOther Metrics:\n")
+print(rf_conf_matrix$byClass)
+
+```
+
+```{r}
+#install.packages("xgboost")
+# Load necessary library
+library(xgboost)
+library(caret)  # For confusion matrix and accuracy
+
+# Prepare the data for xgboost
+# Convert to matrix format
+X_train_matrix <- as.matrix(X_train)
+X_test_matrix <- as.matrix(X_test)
+
+# Convert the target variable to a numeric format if needed
+y_train_numeric <- as.numeric(as.factor(y_train)) - 1  # XGBoost expects 0-based indexing
+y_test_numeric <- as.numeric(as.factor(y_test)) - 1
+
+# Create DMatrix objects
+dtrain <- xgb.DMatrix(data = X_train_matrix, label = y_train_numeric)
+dtest <- xgb.DMatrix(data = X_test_matrix, label = y_test_numeric)
+
+# Set parameters
+params <- list(
+  objective = "multi:softmax",  # Use "multi:softprob" for probabilities
+  eval_metric = "mlogloss",
+  eta = 0.01,
+  max_depth = 1,
+  min_child_weight = 6,
+  subsample = 0.8,
+  seed = 13,
+  num_class = length(unique(y_train))  # Number of classes
+)
+
+# Train the model
+gbc_model <- xgb.train(params = params, data = dtrain, nrounds = 100)
+
+# Make predictions on the test set
+pred <- predict(gbc_model, newdata = dtest)
+
+# Generate confusion matrix for the test set predictions
+xgb_conf_matrix <- confusionMatrix(as.factor(pred), as.factor(y_test_numeric))
+
+# Print confusion matrix
+print("Confusion Matrix:")
+print(xgb_conf_matrix$table)
+
+# Calculate accuracy for the test set predictions
+accuracy <- sum(diag(xgb_conf_matrix$table)) / sum(xgb_conf_matrix$table) * 100
+cat("Accuracy:", accuracy, "%\n")
+
+```
+
+```{r}
+table(y_train)
+```
+```{r}
+# Step 1: Create a dataframe combining features and the target variable
+train_data <- data.frame(X_train, Air_quality = y_train)
+
+# Step 2: Find the maximum class size (i.e., the size of the majority class)
+max_class_size <- max(table(train_data$Air_quality))
+
+# Step 3: Oversample each class to match the majority class size
+set.seed(42)  # For reproducibility
+
+# Create an empty list to store the oversampled classes
+oversampled_classes <- list()
+
+# For each class, randomly sample (with replacement) to reach the max class size
+for(class in unique(train_data$Air_quality)) {
+  class_data <- train_data[train_data$Air_quality == class, ]
+  
+  # If the class size is less than the majority class size, oversample
+  if(nrow(class_data) < max_class_size) {
+    oversampled_data <- class_data[sample(nrow(class_data), max_class_size, replace = TRUE), ]
+  } else {
+    oversampled_data <- class_data
+  }
+  
+  oversampled_classes[[as.character(class)]] <- oversampled_data
+}
+
+# Step 4: Combine the oversampled classes into a new dataset
+train_data_balanced <- do.call(rbind, oversampled_classes)
+
+# Step 5: Check the new class distribution
+table(train_data_balanced$Air_quality)
+```
+```{r}
+# Define the response variable (y) and predictor variables (x)
+y <- train_data_balanced$Air_quality
+x <- train_data_balanced %>%
+  select(City, PM2.5, PM10, NO, NO2, NOx, NH3, CO, SO2, O3, Benzene, Toluene, Xylene, AQI)
+
+# Set seed for reproducibility
+set.seed(0)
+
+# Split the data into training and testing sets (70% training, 30% testing)
+train_index <- createDataPartition(y, p = 0.7, list = FALSE)
+
+# Training set
+X_train2 <- x[train_index, ]
+y_train2 <- y[train_index]
+
+# Testing set
+X_test <- x[-train_index, ]
+y_test <- y[-train_index]
+
+# Display the dimensions of the split datasets
+cat("Training set: X_train =", dim(X_train2), ", y_train =", length(y_train2), "\n")
+cat("Testing set: X_test =", dim(X_test), ", y_test =", length(y_test), "\n")
+```
+
+```{r}
+# Initialize and fit the SVM model
+svm_model <- svm(Air_quality ~ ., data = train_data_balanced,type = "C-classification", kernel = "radial")
+
+# Make predictions on the test set
+svmpred <- predict(svm_model, newdata = data.frame(X_test))
+
+# Generate confusion matrix
+cm <- confusionMatrix(as.factor(svmpred), as.factor(y_test))
+
+# Print confusion matrix
+print("Confusion Matrix:")
+print(cm$table)
+
+# Calculate accuracy
+accuracy <- sum(diag(cm$table)) / sum(cm$table) * 100
+cat("Accuracy:", accuracy, "%\n")
+```
+```{r}
+# Set seed for reproducibility
+set.seed(23)
+
+# Convert 'Air_quality' to factor for categorical predictions
+train_data_balanced$Air_quality <- factor(train_data_balanced$Air_quality)  # Ensure the target variable is a factor
+y_test <- factor(y_test)    # Ensure the test labels are factors
+
+# Initialize and fit the Random Forest model
+rf_model <- randomForest(Air_quality ~ ., data = train_data_balanced, ntree = 20)
+
+# Make predictions on the test set
+rf_predict <- predict(rf_model, newdata = data.frame(X_test))
+
+# Ensure that the predictions are factors (important for confusion matrix)
+rf_predict <- factor(rf_predict, levels = levels(y_test))
+
+# Generate confusion matrix for the test set predictions
+rf_conf_matrix <- confusionMatrix(rf_predict, y_test)
+
+# Print confusion matrix
+print("Confusion Matrix:")
+print(rf_conf_matrix$table)
+
+# Accuracy is part of the confusion matrix output
+rf_acc_score <- rf_conf_matrix$overall['Accuracy'] * 100
+cat("Accuracy:", rf_acc_score, "%\n")
+
+# Additional metrics like sensitivity, specificity, etc.
+cat("\nOther Metrics:\n")
+print(rf_conf_matrix$byClass)
+
+```
+```{r}
+# Prepare the data for xgboost
+# Convert to matrix format
+X_train_matrix <- as.matrix(X_train2)
+X_test_matrix <- as.matrix(X_test)
+
+# Convert the target variable to a numeric format if needed
+y_train_numeric <- as.numeric(as.factor(y_train2)) - 1  # XGBoost expects 0-based indexing
+y_test_numeric <- as.numeric(as.factor(y_test)) - 1
+
+# Create DMatrix objects
+dtrain <- xgb.DMatrix(data = X_train_matrix, label = y_train_numeric)
+dtest <- xgb.DMatrix(data = X_test_matrix, label = y_test_numeric)
+
+# Set parameters
+params <- list(
+  objective = "multi:softmax",  # Use "multi:softprob" for probabilities
+  eval_metric = "mlogloss",
+  eta = 0.01,
+  max_depth = 1,
+  min_child_weight = 6,
+  subsample = 0.8,
+  seed = 13,
+  num_class = length(unique(y_train))  # Number of classes
+)
+
+# Train the model
+gbc_model <- xgb.train(params = params, data = dtrain, nrounds = 100)
+
+# Make predictions on the test set
+pred <- predict(gbc_model, newdata = dtest)
+
+# Generate confusion matrix for the test set predictions
+xgb_conf_matrix <- confusionMatrix(as.factor(pred), as.factor(y_test_numeric))
+
+# Print confusion matrix
+print("Confusion Matrix:")
+print(xgb_conf_matrix$table)
+
+# Calculate accuracy for the test set predictions
+accuracy <- sum(diag(xgb_conf_matrix$table)) / sum(xgb_conf_matrix$table) * 100
+cat("Accuracy:", accuracy, "%\n")
+```
+```{r}
+table(y_train)
+```
+```{r}
+min_class_size <- min(table(y_train))
+min_class_size
+```
+```{r}
+# Step 1: Create a dataframe combining features and the target variable
+train_data <- data.frame(X_train, Air_quality = y_train)
+
+# Step 2: Find the minimum class size (i.e., the size of the minority class)
+min_class_size <- min(table(train_data$Air_quality))
+
+# Step 3: Under-sample each class to match the minority class size
+set.seed(42)  # For reproducibility
+
+# Create an empty list to store the under-sampled classes
+under_sampled_classes <- list()
+
+# For each class, randomly sample 'min_class_size' observations
+for(class in unique(train_data$Air_quality)) {
+  class_data <- train_data[train_data$Air_quality == class, ]
+  under_sampled_data <- class_data[sample(nrow(class_data), min_class_size), ]
+  under_sampled_classes[[as.character(class)]] <- under_sampled_data
+}
+
+# Step 4: Combine the under-sampled classes into a new dataset
+train_data_balanced <- do.call(rbind, under_sampled_classes)
+
+# Step 5: Check the new class distribution
+table(train_data_balanced$Air_quality)
+```
+```{r}
+# Define the response variable (y) and predictor variables (x)
+y <- train_data_balanced$Air_quality
+x <- train_data_balanced %>%
+  select(City, PM2.5, PM10, NO, NO2, NOx, NH3, CO, SO2, O3, Benzene, Toluene, Xylene, AQI)
+
+# Set seed for reproducibility
+set.seed(0)
+
+# Split the data into training and testing sets (70% training, 30% testing)
+train_index <- createDataPartition(y, p = 0.7, list = FALSE)
+
+# Training set
+X_train1 <- x[train_index, ]
+y_train1 <- y[train_index]
+
+# Testing set
+X_test1 <- x[-train_index, ]
+y_test1 <- y[-train_index]
+
+# Display the dimensions of the split datasets
+cat("Training set: X_train =", dim(X_train1), ", y_train =", length(y_train1), "\n")
+cat("Testing set: X_test =", dim(X_test), ", y_test =", length(y_test1), "\n")
+```
+
+```{r}
+# Initialize and fit the SVM model
+svm_model <- svm(Air_quality ~ ., data = train_data_balanced,type = "C-classification", kernel = "radial")
+
+# Make predictions on the test set
+svmpred <- predict(svm_model, newdata = data.frame(X_test))
+
+# Generate confusion matrix
+cm <- confusionMatrix(as.factor(svmpred), as.factor(y_test))
+
+# Print confusion matrix
+print("Confusion Matrix:")
+print(cm$table)
+
+# Calculate accuracy
+accuracy <- sum(diag(cm$table)) / sum(cm$table) * 100
+cat("Accuracy:", accuracy, "%\n")
+```
+```{r}
+# Set seed for reproducibility
+set.seed(23)
+
+# Convert 'Air_quality' to factor for categorical predictions
+train_data_balanced$Air_quality <- factor(train_data_balanced$Air_quality)  # Ensure the target variable is a factor
+y_test <- factor(y_test)    # Ensure the test labels are factors
+
+# Initialize and fit the Random Forest model
+rf_model <- randomForest(Air_quality ~ ., data = train_data_balanced, ntree = 20)
+
+# Make predictions on the test set
+rf_predict <- predict(rf_model, newdata = data.frame(X_test))
+
+# Ensure that the predictions are factors (important for confusion matrix)
+rf_predict <- factor(rf_predict, levels = levels(y_test))
+
+# Generate confusion matrix for the test set predictions
+rf_conf_matrix <- confusionMatrix(rf_predict, y_test)
+
+# Print confusion matrix
+print("Confusion Matrix:")
+print(rf_conf_matrix$table)
+
+# Accuracy is part of the confusion matrix output
+rf_acc_score <- rf_conf_matrix$overall['Accuracy'] * 100
+cat("Accuracy:", rf_acc_score, "%\n")
+
+# Additional metrics like sensitivity, specificity, etc.
+cat("\nOther Metrics:\n")
+print(rf_conf_matrix$byClass)
+
+```
+```{r}
+# Prepare the data for xgboost
+# Convert to matrix format
+X_train_matrix <- as.matrix(X_train)
+X_test_matrix <- as.matrix(X_test)
+
+# Convert the target variable to a numeric format if needed
+y_train_numeric <- as.numeric(as.factor(y_train)) - 1  # XGBoost expects 0-based indexing
+y_test_numeric <- as.numeric(as.factor(y_test)) - 1
+
+# Create DMatrix objects
+dtrain <- xgb.DMatrix(data = X_train_matrix, label = y_train_numeric)
+dtest <- xgb.DMatrix(data = X_test_matrix, label = y_test_numeric)
+
+# Set parameters
+params <- list(
+  objective = "multi:softmax",  # Use "multi:softprob" for probabilities
+  eval_metric = "mlogloss",
+  eta = 0.01,
+  max_depth = 1,
+  min_child_weight = 6,
+  subsample = 0.8,
+  seed = 13,
+  num_class = length(unique(y_train))  # Number of classes
+)
+
+# Train the model
+gbc_model <- xgb.train(params = params, data = dtrain, nrounds = 100)
+
+# Make predictions on the test set
+pred <- predict(gbc_model, newdata = dtest)
+
+# Generate confusion matrix for the test set predictions
+xgb_conf_matrix <- confusionMatrix(as.factor(pred), as.factor(y_test_numeric))
+
+# Print confusion matrix
+print("Confusion Matrix:")
+print(xgb_conf_matrix$table)
+
+# Calculate accuracy for the test set predictions
+accuracy <- sum(diag(xgb_conf_matrix$table)) / sum(xgb_conf_matrix$table) * 100
+cat("Accuracy:", accuracy, "%\n")
+```
